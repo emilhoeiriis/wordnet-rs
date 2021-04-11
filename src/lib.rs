@@ -279,7 +279,9 @@ impl DBFile {
         let mut begin = 0u64;
         let mut pos = end / 2;
 
-        while end - begin > (word.len() + 10) as u64 {
+        let mut tries: usize = 0;
+
+        while end - begin > (word.len() + 10) as u64 && tries < 1 << 12 {
             if end - pos < 32 {
                 pos = begin;
             }
@@ -301,6 +303,7 @@ impl DBFile {
                 let newline = &block[newline_offset + 1..];
                 let current_line_starts_at = pos + newline_offset as u64 + 1;
                 let rel = self.is_found_here(current_line_starts_at, newline, word);
+
                 match rel {
                     Ordering::Equal => return Some(current_line_starts_at),
                     Ordering::Less => {
@@ -326,6 +329,8 @@ impl DBFile {
             } else {
                 pos -= std::cmp::min(64, pos);
             }
+
+            tries += 1;
         }
 
         None
@@ -532,6 +537,7 @@ mod test {
     fn test_1() {
         let wn = ::Database::open(&::std::path::Path::new("/usr/share/wordnet/dict")).unwrap();
         assert_eq!(18, wn.senses("bank").len());
+        wn.senses("dedan");
         assert_eq!(
             1,
             wn.senses("bank")[2]
